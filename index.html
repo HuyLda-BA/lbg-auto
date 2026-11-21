@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LBG Auto – Lịch báo giảng tự động</title>
+  <link rel="preload" href="fonts/be-vietnam-pro-400-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/be-vietnam-pro-400-vietnamese.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="fonts/be-vietnam-pro.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="wide">
+  <!--
+    SCREEN MAP (Phương án A – 1 màn hình):
+      Màn chính: LỊCH BÁO GIẢNG (process 4 bước)
+        ├─ Popup "Quản lý TKB của tôi"   (#tkbManagerSheet)  – bảng danh sách TKB
+        └─ Popup "Tạo / Sửa / Xem TKB"   (#tkbEditorSheet)   – form TKB theo Mẫu LBG trường
+      Popup xác nhận (#modal) luôn nằm trên cùng.
+  -->
+  <header class="app-header">
+    <div class="brand">📘 LBG Auto</div>
+    <div class="header-actions">
+      <button class="btn header-btn" id="btnHeaderManage" type="button">📋 TKB của tôi</button>
+      <button class="btn header-btn primary" id="btnHeaderNew" type="button">+ Tạo TKB của tôi</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="storageBanner" class="banner"></div>
+
+    <!-- ===================== MÀN HÌNH DUY NHẤT: Lịch báo giảng ===================== -->
+    <section id="view-lbg" class="view">
+      <div class="view-head">
+        <div>
+          <h1>Lịch báo giảng</h1>
+          <p class="subtitle">Tạo LBG của tôi từ LBG mẫu qua 4 bước</p>
+        </div>
+      </div>
+
+      <div id="lbgEmpty" class="empty-hero hidden">
+        <div class="empty-icon">🗓️</div>
+        <h2>Bắt đầu bằng việc tạo Thời khóa biểu của bạn</h2>
+        <p>TKB là danh sách môn theo từng tiết trong tuần của lớp bạn, dựng theo Mẫu LBG của trường.<br />
+           Tạo 1 lần, dùng lại cho mọi tuần.</p>
+        <button class="btn primary big" id="btnLbgCreateTkb">+ Tạo TKB của tôi</button>
+      </div>
+
+      <div id="lbgMain" class="hidden">
+        <!-- ===== Process 4 bước ===== -->
+        <ol class="stepper" id="stepper">
+          <li class="step" data-step="1">
+            <div class="step-head">
+              <span class="step-badge"><span class="num">1</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+              <div><div class="step-kicker">Bước 1</div><div class="step-title">Chọn TKB</div></div>
+            </div>
+            <div class="step-body">
+              <div class="row nowrap">
+                <select id="lbgTkbSelect" aria-label="TKB của tôi"></select>
+                <button class="btn small ghost icon-only" id="btnViewSelectedTkb" type="button" title="Xem TKB đang chọn">👁</button>
+                <button class="btn small ghost icon-only" id="btnEditSelectedTkb" type="button" title="Sửa TKB đang chọn">✏️</button>
+              </div>
+              <div class="row">
+                <button class="btn small" id="btnManageTkb" type="button">📋 Quản lý TKB</button>
+                <button class="btn small" id="btnNewTkb" type="button">+ Tạo TKB</button>
+              </div>
+              <div class="step-note" id="step1Note"></div>
+            </div>
+          </li>
+          <li class="step" data-step="2">
+            <div class="step-head">
+              <span class="step-badge"><span class="num">2</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+              <div><div class="step-kicker">Bước 2</div><div class="step-title">Nhập LBG mẫu</div></div>
+            </div>
+            <div class="step-body"><div class="step-note" id="step2Note"></div></div>
+          </li>
+          <li class="step" data-step="3">
+            <div class="step-head">
+              <span class="step-badge"><span class="num">3</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+              <div><div class="step-kicker">Bước 3</div><div class="step-title">Gen LBG của tôi</div></div>
+            </div>
+            <div class="step-body">
+              <button class="btn primary" id="btnGen" disabled>⚙️ Gen LBG của tôi</button>
+              <div class="step-note" id="step3Note"></div>
+            </div>
+          </li>
+          <li class="step" data-step="4">
+            <div class="step-head">
+              <span class="step-badge"><span class="num">4</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+              <div><div class="step-kicker">Bước 4</div><div class="step-title">Chỉnh sửa &amp; Xuất file</div></div>
+            </div>
+            <div class="step-body">
+              <div class="row export-row">
+                <button class="btn small" id="btnExcelRes" disabled title="Tải file Excel (.xlsx)">📊 Excel</button>
+                <button class="btn small" id="btnWordRes" disabled title="Tải file Word (.docx)">📝 Word</button>
+                <button class="btn small" id="btnCopyRes" disabled title="Copy để dán vào Word/Excel">📋 Copy</button>
+                <button class="btn small" id="btnPrintRes" disabled>🖨 In</button>
+              </div>
+              <div class="step-note" id="step4Note"></div>
+            </div>
+          </li>
+        </ol>
+
+        <details class="hint">
+          <summary>💡 Hướng dẫn nhập LBG mẫu (dán từ Excel)</summary>
+          <div class="hint-body">
+            Nhập <b>Số tuần</b>, <b>Từ ngày</b> (gõ <b>dd/mm/yyyy</b> hoặc bấm 📅 để chọn trên lịch) → hệ thống tự điền Đến ngày, cột Ngày thứ, ngày ký (vẫn sửa được).<br />
+            Dán từ Excel: bôi đen các cột từ <b>Tiết theo PPCT</b> đến <b>ĐDDH</b> (PPCT | Môn | Tên bài | ĐDDH), <kbd>Ctrl</kbd>+<kbd>C</kbd>,
+            bấm vào ô <b>PPCT</b> của dòng bắt đầu rồi <kbd>Ctrl</kbd>+<kbd>V</kbd>.<br />
+            Ở bảng <b>LBG của tôi</b> có thể sửa cột <b>Môn</b> và thông tin ký (<b>Nơi chốn, Chức vụ lãnh đạo, Tên lãnh đạo</b>);
+            bấm <b>💾 Lưu TKB</b> để cập nhật vào thời khóa biểu.
+          </div>
+        </details>
+
+        <!-- Báo cáo sau khi Gen: chia 2 cột ứng với 2 bảng bên dưới -->
+        <div id="genReport" class="report hidden"></div>
+
+        <div class="lbg-panels">
+          <div class="panel" id="panelTt">
+            <div class="panel-title">
+              <h2><span class="dot sample"></span>LBG mẫu</h2>
+              <button class="btn small danger" id="btnClearTt" type="button">🧹 Xóa LBG mẫu</button>
+            </div>
+            <div class="paper compact" id="ttPaper">
+              <div class="paper-head">
+                <h2 class="week-title">TUẦN <input id="ttWeek" class="inline-input w-xs" maxlength="5" placeholder="Số" /><span class="req-tag hidden" data-req-for="week">bắt buộc</span></h2>
+                <p class="week-range"><strong>
+                  (Từ ngày <span class="date-field"><input type="text" id="ttFrom" class="date-input" placeholder="dd/mm/yyyy" maxlength="10" inputmode="numeric" autocomplete="off" /><button type="button" class="cal-btn" data-for="ttFrom" title="Chọn ngày trên lịch"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button><input type="date" class="date-picker" data-for="ttFrom" tabindex="-1" aria-hidden="true" /></span>
+                  đến ngày <span class="date-field"><input type="text" id="ttTo" class="date-input" placeholder="dd/mm/yyyy" maxlength="10" inputmode="numeric" autocomplete="off" /><button type="button" class="cal-btn" data-for="ttTo" title="Chọn ngày trên lịch"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button><input type="date" class="date-picker" data-for="ttTo" tabindex="-1" aria-hidden="true" /></span>)
+                </strong><span class="req-tag hidden" data-req-for="dates">bắt buộc</span></p>
+              </div>
+              <table class="lbg-table">
+                <thead id="ttHead"></thead>
+                <tbody id="ttBody"></tbody>
+              </table>
+              <div class="sign">
+                <p class="sign-date"><em>
+                  <span id="ttPlace" class="from-tkb"></span>,
+                  ngày <input id="ttFd" class="inline-input w-xs" maxlength="2" />
+                  tháng <input id="ttFm" class="inline-input w-xs" maxlength="2" />
+                  năm <input id="ttFy" class="inline-input w-sm" maxlength="4" />
+                </em></p>
+                <p class="sign-role"><strong id="ttRole" class="from-tkb"></strong></p>
+                <div class="sign-space"></div>
+                <p class="sign-name"><strong id="ttLeader" class="from-tkb"></strong></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="gen-arrow">
+            <button class="arrow-btn" id="btnGenArrow" type="button" disabled title="Gen LBG của tôi từ LBG mẫu">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+              <span>Gen</span>
+            </button>
+          </div>
+
+          <div class="panel" id="panelRes">
+            <div class="panel-title">
+              <h2><span class="dot mine"></span>LBG của tôi</h2>
+              <button class="btn small primary" id="btnSaveTkb" type="button" disabled title="Lưu thay đổi cột Môn và thông tin ký (Nơi chốn, Chức vụ lãnh đạo, Tên lãnh đạo) vào TKB">💾 Lưu TKB</button>
+            </div>
+            <div class="paper compact" id="resPaper"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================== POPUP: Quản lý TKB của tôi ===================== -->
+  <div id="tkbManagerSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="tkbManagerTitle">
+    <div class="sheet-box sheet-md">
+      <div class="sheet-head">
+        <div>
+          <h2 id="tkbManagerTitle">Thời khóa biểu của tôi</h2>
+          <p class="subtitle">Danh sách TKB bạn đã tạo – mới cập nhật xếp trên cùng</p>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btnCreate" type="button">+ Tạo TKB của tôi</button>
+          <button class="sheet-close" data-close="tkbManagerSheet" type="button" title="Đóng (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="sheet-body">
+        <div id="tkbList"></div>
+      </div>
+      <div class="sheet-foot pager-foot" id="tkbPager"></div>
+    </div>
+  </div>
+
+  <!-- ===================== POPUP: Tạo / Sửa / Xem TKB của tôi ===================== -->
+  <div id="tkbEditorSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+    <div class="sheet-box sheet-lg">
+      <div class="sheet-head">
+        <h2 id="editorTitle">Tạo TKB của tôi</h2>
+        <button class="sheet-close" data-close="tkbEditorSheet" type="button" title="Đóng (Esc)">✕</button>
+      </div>
+      <div class="sheet-body">
+        <div class="field-row">
+          <div class="field">
+            <label for="tkbTemplate">Mẫu LBG của trường <span class="req">*</span></label>
+            <select id="tkbTemplate" class="select"></select>
+            <div class="field-help">Khung lịch báo giảng của trường: các cột, buổi học, số tiết mỗi ngày.</div>
+          </div>
+          <div class="field">
+            <label for="tkbName">Tên TKB <span class="req">*</span></label>
+            <input id="tkbName" type="text" placeholder="VD: TKB lớp 2A1 – HK1 2026-2027" maxlength="120" />
+          </div>
+        </div>
+
+        <div class="hint">
+          💡 <b>Dán từ Excel:</b> trong Excel bôi đen 1 cột môn (theo thứ tự Thứ Hai tiết 1 → Thứ Sáu tiết cuối),
+          nhấn <kbd>Ctrl</kbd>+<kbd>C</kbd>, bấm vào ô <b>Môn</b> muốn bắt đầu rồi nhấn <kbd>Ctrl</kbd>+<kbd>V</kbd>.
+          Ô trống trong Excel thì ô Môn cũng để trống.
+          <button class="btn small" id="btnClear" type="button">🧹 Xóa tất cả môn</button>
+        </div>
+
+        <div class="paper">
+          <h2 class="week-title">TUẦN <span class="locked-inline" title="Không cho sửa"></span></h2>
+          <p class="week-range">
+            <strong>(Từ ngày <span class="locked-inline" title="Không cho sửa"></span>
+            đến ngày <span class="locked-inline" title="Không cho sửa"></span>)</strong>
+          </p>
+
+          <table class="lbg-table">
+            <thead id="tkbHead"></thead>
+            <tbody id="tkbBody"></tbody>
+          </table>
+
+          <div class="sign">
+            <p class="sign-date"><em>
+              <input id="fPlace" class="inline-input w-md" maxlength="60" placeholder="Nơi chốn (VD: Đông Hội)" />,
+              ngày <span class="locked-inline" title="Không cho sửa"></span>
+              tháng <span class="locked-inline" title="Không cho sửa"></span>
+              năm <span class="locked-inline" title="Không cho sửa"></span>
+            </em></p>
+            <p class="sign-role"><input id="fRole" class="inline-input w-lg bold" maxlength="80" placeholder="Chức vụ lãnh đạo (VD: Tổ trưởng chuyên môn)" /></p>
+            <div class="sign-space"></div>
+            <p class="sign-name"><input id="fLeader" class="inline-input w-lg bold" maxlength="80" placeholder="Tên lãnh đạo (VD: Nguyễn Thị A)" /></p>
+            <p class="sign-optional">Thông tin ký không bắt buộc – có thể bổ sung sau.</p>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-foot">
+        <button class="btn" id="btnCancel" type="button">Hủy</button>
+        <button class="btn primary hidden" id="btnToEdit" type="button">✏️ Sửa TKB này</button>
+        <button class="btn primary" id="btnSave" type="button">💾 Lưu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bản in sạch của LBG của tôi (chỉ dùng khi bấm In) -->
+  <div id="printArea" aria-hidden="true"></div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h3 id="modalTitle"></h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="btn" id="modalCancel">Hủy</button>
+        <button class="btn primary" id="modalOk">Đồng ý</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/templates.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/rules.js"></script>
+  <script src="js/tkb.js"></script>
+  <script src="js/export.js"></script>
+  <script src="js/lbg.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
